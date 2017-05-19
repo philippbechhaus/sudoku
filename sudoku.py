@@ -108,7 +108,7 @@ def only_choice(values):
                 values[dplaces[0]] = digit
     return values
 
-
+# solving with constraint propagation
 def reduce_puzzle(values):
     """
     Iterate eliminate() and only_choice(). If at some point, there is a box with no available values, return False.
@@ -136,5 +136,31 @@ def reduce_puzzle(values):
     return values
 
 
-grid = '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..'
-display(reduce_puzzle(grid_values(grid)))
+grid1 = '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..'
+grid2 = '4....................7......2.....6..............1.......6.....5..2.....1.4......'
+values = grid_values(grid2)
+
+
+def search(values):
+    """
+    Using depth-first search and propagation
+    Try all possible values.
+    """
+
+    values = reduce_puzzle(values)
+    if values is False:
+        return False ##failed earlier
+    if all(len(values[s]) == 1 for s in boxes):
+        return values ##success
+    # choose box with fewest possibilities
+    n,s = min((len(values[s]),s) for s in boxes if len(values[s]) > 1)
+    # recurrence
+    for value in values[s]:
+        new_sudoku = values.copy()
+        new_sudoku[s] = value
+        attempt = search(new_sudoku)
+        if attempt:
+            return attempt
+
+
+display(search(values))
