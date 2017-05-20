@@ -6,6 +6,10 @@
 rows = 'ABCDEFGHI'
 cols = '123456789'
 
+grid1 = '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..'
+grid2 = '..3...6..4.......1..18.64...........7.......8..67.82....26.95..8.......9..5.1.3..'
+grid3 = '4....................7......2.....6..............1.......6.....5..2.....1.4......'
+
 # helper function:
 # given two strings (a and b), func will return the list formed by all the
 # possible concatenations of a letter s in string a with a letter t in string b
@@ -62,6 +66,21 @@ def grid_values(grid):
         - keys: Box labels, e.g. 'A1'
         - values: Value in corresponding box, e.g. '8', or '.' if it is empty.
     """
+    assert len(grid) == 81, "Input grid must be a string of length 81 (9x9)"
+    return dict(zip(boxes, grid))
+
+
+def grid_values_withhint(grid):
+    """
+    Convert grid string into {<box>: <value>} dict with '.' value for empties.
+
+    Args:
+        grid: Sudoku grid in string form, 81 characters long
+    Returns:
+        Sudoku grid in dictionary form:
+        - keys: Box labels, e.g. 'A1'
+        - values: Value in corresponding box, e.g. '8', or '.' if it is empty.
+    """
     values = []
     all_digits = '123456789'
     for elem in grid:
@@ -108,6 +127,7 @@ def only_choice(values):
                 values[dplaces[0]] = digit
     return values
 
+
 # solving with constraint propagation
 def reduce_puzzle(values):
     """
@@ -135,18 +155,12 @@ def reduce_puzzle(values):
             return False
     return values
 
-
-grid1 = '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..'
-grid2 = '4....................7......2.....6..............1.......6.....5..2.....1.4......'
-values = grid_values(grid2)
-
-
+# solving with search
 def search(values):
     """
     Using depth-first search and propagation
     Try all possible values.
     """
-
     values = reduce_puzzle(values)
     if values is False:
         return False ##failed earlier
@@ -163,4 +177,50 @@ def search(values):
             return attempt
 
 
-display(search(values))
+def initiation():
+    beginnerlevel = 1
+    advancedlevel = 2
+    expertlevel = 3
+    print("Sudoku" "\n" "Code by Philipp Bechhaus" "\n" "\n")
+    while True:
+        try:
+            difficulty = int(input("How hard should we go?: " "\n" "\n" "Select" "\n" "1 for BEGINNER"
+                           "\n" "2 for ADVANCED" "\n" "3 for PRO" "\n" "\n"))
+        except ValueError:
+            print("That's not a number!")
+        else:
+            if beginnerlevel <= difficulty <= expertlevel:
+                break
+            else:
+                print("We're not there yet..")
+    return difficulty
+
+
+def run():
+    difficulty = initiation()
+    if difficulty == 1:
+        values1 = grid_values(grid1)
+        values2 = grid_values_withhint(grid1)
+        values3 = search(grid_values_withhint(grid1))
+    if difficulty == 2:
+        values1 = grid_values(grid2)
+        values2 = grid_values_withhint(grid2)
+        values3 = search(grid_values_withhint(grid2))
+    if difficulty == 3:
+        values1 = grid_values(grid3)
+        values2 = grid_values_withhint(grid3)
+        values3 = search(grid_values_withhint(grid3))
+    display(values1)
+    print("\n""\n")
+    raw_input("Press ENTER to see hints...")
+    print("\n""\n")
+    display(values2)
+    print("\n""\n")
+    raw_input("Press ENTER to solve Sudoku...")
+    print("\n""\n")
+    display(values3)
+    print("\n""\n")
+    print("Cool!")
+    print("\n""\n")
+
+run()
