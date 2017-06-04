@@ -1,44 +1,5 @@
-#@@@#@@@#@@@#
-# S U D O K U
-#@@@#@@@#@@@#
-# by Philipp Bechhaus
-
-rows = 'ABCDEFGHI'
-cols = '123456789'
-
-grid1 = '..3.2.6..9..3.5..1..18.64....81.29..7.......8..67.82....26.95..8..2.3..9..5.1.3..'
-grid2 = '..3...6..4.......1..18.64...........7.......8..67.82....26.95..8.......9..5.1.3..'
-grid3 = '4....................7......2.....6..............1.......6.....5..2.....1.4......'
-
-# helper function:
-# given two strings (a and b), func will return the list formed by all the
-# possible concatenations of a letter s in string a with a letter t in string b
-def cross(a,b):
-    return [s+t for s in a for t in b]
-
-
-boxes = cross(rows, cols)
-# returns sudoku board
-
-row_units = [cross(r, cols) for r in rows]
-# element example:
-# row_units[0] = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9']
-
-column_units = [cross(rows, c) for c in cols]
-# element example:
-# column_units[0] = ['A1', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1', 'I1']
-
-square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
-# element example:
-# square_units[0] = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
-
-unitlist = row_units + column_units + square_units
-units = dict((s, [u for u in unitlist if s in u]) for s in boxes)
-peers = dict((s, set(sum(units[s],[]))-set([s])) for s in boxes)
-# set is an unordered collection of items. Every element is unique
-# (no duplicates) and must be immutable (which cannot be changed)
-# sum adds the items of an iterable and returns the sum
-
+from init import *
+import itertools
 
 def display(values):
     """
@@ -57,7 +18,7 @@ def display(values):
 
 def grid_values(grid):
     """
-    Convert grid string into {<box>: <value>} dict with '.' value for empties.
+    Converts grid string into {<box>: <value>} dict with '.' value for empties.
 
     Args:
         grid: Sudoku grid in string form, 81 characters long
@@ -72,14 +33,14 @@ def grid_values(grid):
 
 def grid_values_withhint(grid):
     """
-    Convert grid string into {<box>: <value>} dict with '.' value for empties.
+    Converts grid string into {<box>: <value>} dict with '.' value for empties.
 
     Args:
         grid: Sudoku grid in string form, 81 characters long
     Returns:
         Sudoku grid in dictionary form:
         - keys: Box labels, e.g. 'A1'
-        - values: Value in corresponding box, e.g. '8', or '.' if it is empty.
+        - values: Value in corresponding box, e.g. '8', or '123456789' if it is empty.
     """
     values = []
     all_digits = '123456789'
@@ -94,9 +55,9 @@ def grid_values_withhint(grid):
 
 def eliminate(values):
     """
-    Eliminate values from peers of each box with a single value.
-    Go through all the boxes, and whenever there is a box with a single value,
-    eliminate this value from the set of values of all its peers.
+    Eliminates values from peers of each box with a single value.
+    Goes through all the boxes, and whenever there is a box with a single value,
+    eliminates this value from the set of values of all its peers.
 
     Args:
         values: Sudoku in dictionary form.
@@ -113,12 +74,14 @@ def eliminate(values):
 
 def only_choice(values):
     """
-    Finalize all values that are the only choice for a unit.
-    Go through all the units, and whenever there is a unit with a value
-    that only fits in one box, assign the value to this box.
+    Modifies all values that are the only choice for a unit.
+    Goes through all the units, and whenever there is a unit with a value
+    that only fits in one box, assigns the value to this box.
 
-    Input: Sudoku in dictionary form.
-    Output: Resulting Sudoku in dictionary form after filling in only choices.
+    Args:
+        values: Sudoku in dictionary form.
+    Returns:
+        Resulting Sudoku in dictionary form after filling in only choices.
     """
     for unit in unitlist:
         for digit in '123456789':
@@ -128,15 +91,47 @@ def only_choice(values):
     return values
 
 
+def naked_twins(values):
+    """
+    Eliminate values using the naked twins strategy.
+
+    Args:
+        values(dict): a dictionary of the form {'box_name': '123456789', ...}
+    Returns:
+        the values dictionary with the naked twins eliminated from peers.
+    """
+    # find box in unit of unitlist that has a value length of 2
+    for unit in unitlist:
+        # add box of len 2 to list for inspection
+        twins = [box for box in unit if len(values[box]) == 2]
+        # inspect if box of len 2 has a twin within the same unit
+        potential_naked_twins = [list(twin) for twin in itertools.combinations(twins, 2)]
+        # further inspect formed twins
+        for a,b in potential_naked_twins:
+            # value to replace peers
+            naked_value = values[a]
+            # expose naked_twins
+            if values[a] == values[b]:
+                for box in unit:
+                    # exclude naked_twins from value replacement
+                    if box != a and box != b:
+                        # replace each digit of value
+                        for digit in naked_value:
+                            values[box] = values[box].replace(digit,'')
+    return values
+
+
 # solving with constraint propagation
 def reduce_puzzle(values):
     """
-    Iterate eliminate() and only_choice(). If at some point, there is a box with no available values, return False.
+    Iterates eliminate() and only_choice(). If at some point, there is a box with no available values, return False.
     If the sudoku is solved, return the sudoku.
     If after an iteration of both functions, the sudoku remains the same, return the sudoku.
 
-    Input: A sudoku in dictionary form.
-    Output: The resulting sudoku in dictionary form.
+    Args:
+        value: A sudoku in dictionary form.
+    Returns:
+        The resulting sudoku in dictionary form.
     """
     stalled = False
     while not stalled:
@@ -146,6 +141,8 @@ def reduce_puzzle(values):
         values = eliminate(values)
         # Use the Only Choice Strategy
         values = only_choice(values)
+        # Use the Naked Twins Strategy
+        values = naked_twins(values)
         # Check how many boxes have a determined value, to compare
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
         # If no new values were added, stop the loop.
@@ -178,6 +175,9 @@ def search(values):
 
 
 def initiation():
+    """
+    Game initiation (helper)
+    """
     beginnerlevel = 1
     advancedlevel = 2
     expertlevel = 3
@@ -195,21 +195,23 @@ def initiation():
                 print("We're not there yet..")
     return difficulty
 
-
 def run():
+    """
+    Game execution
+    """
     difficulty = initiation()
     if difficulty == 1:
         values1 = grid_values(grid1)
-        values2 = grid_values_withhint(grid1)
-        values3 = search(grid_values_withhint(grid1))
+        values2 = eliminate(grid_values_withhint(grid1))
+        values3 = search(values2)
     if difficulty == 2:
         values1 = grid_values(grid2)
-        values2 = grid_values_withhint(grid2)
-        values3 = search(grid_values_withhint(grid2))
+        values2 = eliminate(grid_values_withhint(grid2))
+        values3 = search(values2)
     if difficulty == 3:
         values1 = grid_values(grid3)
-        values2 = grid_values_withhint(grid3)
-        values3 = search(grid_values_withhint(grid3))
+        values2 = eliminate(grid_values_withhint(grid3))
+        values3 = search(values2)
     display(values1)
     print("\n""\n")
     raw_input("Press ENTER to see hints...")
@@ -223,4 +225,5 @@ def run():
     print("Cool!")
     print("\n""\n")
 
-run()
+if __name__ == '__main__':
+    run()
